@@ -1,0 +1,31 @@
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+
+public class MuseumTicketApp {
+
+    /**
+     * Berechnet den Preis eines Museumstickets basierend auf dem Alter.
+     * €15 für diejenigen über 18, €9 für diejenigen unter 18.
+     */
+    public static int calculateTicketPrice(int age) {
+        if (age > 18) {
+            return 15;
+        } else {
+            return 9;
+        }
+    }
+
+    // --- Unit Tests ---
+
+    void testTicketPriceAge30() {
+        // Test 1: age = 30 => expects 15
+        int price = calculateTicketPrice(30);
+        assertEquals(15, price);
+    }
+
+    void testTicketPriceAge10() {
+        // Test 2: age = 10 => expects 9[cite: 1]
+        int price = calculateTicketPrice(10);
+        assertEquals(9, price);
+    }
+}
