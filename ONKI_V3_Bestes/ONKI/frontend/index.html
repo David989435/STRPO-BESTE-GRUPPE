@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FFFFFF">
+  <meta name="description" content="ONKI – deine Karteikarten, dein Lernfortschritt. Lerne mit gezielten Wiederholungen und behalte den Überblick.">
+  <title>ONKI · Dein Lernraum</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/onki.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/App.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Zum Inhalt</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Hauptnavigation">
+      <a class="brand" href="#/" aria-label="ONKI Startseite"><img src="/assets/onki.svg" alt="" width="36" height="36"><span>onki<span class="brand-dot">.</span></span></a>
+      <div class="workspace-label">KARTE FÜR KARTE</div>
+      <nav class="main-nav">
+        <a href="#/" data-nav="home"><span data-icon="grid"></span>Übersicht</a>
+        <a href="#/decks" data-nav="decks"><span data-icon="layers"></span>Kartendecks</a>
+      </nav>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-caption">DEINE FÄCHER</div>
+      <nav id="quick-decks" class="quick-decks" aria-label="Deine Kartendecks"></nav>
+      <div class="sidebar-bottom">
+        <button class="help-button" id="algorithm-help"><span data-icon="spark"></span>So lernt ONKI mit dir<span data-icon="arrow"></span></button>
+        <div class="profile"><span class="avatar">L</span><div><strong>Mein Lernraum</strong><span>Ein Schritt nach dem anderen.</span></div></div>
+      </div>
+    </aside>
+    <div class="content-shell">
+      <header class="topbar"><div class="breadcrumb"><span>Mein Lernraum</span><span class="slash">/</span><strong id="breadcrumb-current">Übersicht</strong></div><div class="topbar-end"><span id="today"></span><span class="small-logo" aria-hidden="true">[ ONKI ]</span></div></header>
+      <main id="main" tabindex="-1"><div class="loading" role="status">Dein Lernraum wird geladen …</div></main>
+      <footer class="page-footer"><span>ONKI</span><span>Lernen in deinem Rhythmus.</span></footer>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript>Bitte aktiviere JavaScript, um deine Karteikarten zu verwalten.</noscript>
+</body>
+</html>

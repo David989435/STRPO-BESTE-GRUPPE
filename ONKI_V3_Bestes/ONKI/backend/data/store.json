@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "decks": [
+    {
+      "id": "5e0844f6-5c9f-4ef0-8462-94b676d6befe",
+      "name": "Datebannk verstehen",
+      "subject": "Datenmanagement",
+      "description": "Alles über datenbanken und relationale datenbanken",
+      "createdAt": "2026-10-06T13:12:44.646Z",
+      "updatedAt": "2026-10-06T13:12:44.646Z"
+    },
+    {
+      "id": "c97a806d-b879-4e52-9915-6c202c95df07",
+      "name": "!13=================================================================================================",
+      "subject": "pHOTo",
+      "description": "",
+      "createdAt": "2026-10-06T13:14:27.391Z",
+      "updatedAt": "2026-10-06T13:14:27.391Z"
+    }
+  ],
+  "cards": [
+    {
+      "id": "0a97716b-3ad4-4b24-ab9b-04ad12091cb6",
+      "deckId": "5e0844f6-5c9f-4ef0-8462-94b676d6befe",
+      "front": "Was ist ein Datenbank",
+      "back": "Es ist ein System das Daten verwalten kann und pärsistent spiechern kann",
+      "images": [
+        {
+          "id": "62486b63-9805-4fba-bcbf-005a222bb933",
+          "filename": "3d6a4ac4-c973-4cce-a9b7-748e15ef66dc.jpg",
+          "originalName": "FHID.jpeg",
+          "mime": "image/jpeg",
+          "size": 163914,
+          "side": "front"
+        }
+      ],
+      "score": 0,
+      "lastRating": null,
+      "nextReviewAt": null,
+      "reviewCount": 0,
+      "lastReviewedAt": null,
+      "createdAt": "2026-10-06T13:13:30.737Z"
+    }
+  ],
+  "reviews": []
+}
