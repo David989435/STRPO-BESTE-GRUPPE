@@ -1,0 +1,7 @@
+Die Website kann man über ein Live Server in Visual Studio Code aufrufen. Hier ist wie man das macht.
+
+Step 1: in Visual Studio code unter Extensions "Live Server" von "Ritwick Dey" installieren. Das braucht man um ein Live Server zu erstellen.
+
+Fertig! Man kann jetzt die Website starten indem man rechts clickt auf die Datei "index.html" und "Open with Live Server". Dann sollte die Website sich einfach aufmachen.
+
+WENN NICHT BITTE MELDEN! DANKE!

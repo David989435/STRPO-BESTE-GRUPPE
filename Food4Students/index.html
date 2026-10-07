@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Food4Students – Restaurant-Empfehlung</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <!-- Rundes Drop-Pin-Logo -->
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="20" fill="#0e6b7c"/>
+        <path d="M20 8c-4.7 0-8.5 3.7-8.5 8.3 0 6 8.5 15.2 8.5 15.2s8.5-9.200 8.500-15.200C28.500 11.700 24.700 8 20 8z" fill="#fff"/>
+        <circle cx="20" cy="16.500" r="3.300" fill="#0e6b7c"/>
+      </svg>
+      Food4Students
+    </div>
+    <div class="loc">📍 Wien</div>
+  </header>
+
+  <section class="hero">
+    <span class="eyebrow">Kulinarischer Guide · Wien</span>
+    <h1>Wo möchten Sie heute <em>genießen?</em></h1>
+    <p>Sag uns, was dir wichtig ist – wir finden das passende Restaurant für dich.</p>
+
+    <div class="searchwrap" id="searchwrap">
+      <div class="searchbar" id="searchbar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.500-3.500"/></svg>
+        <input id="suche" type="text" placeholder="Restaurants oder Küchen suchen…" autocomplete="off">
+        <button class="pill" id="pillKueche" type="button">Küche</button>
+        <button class="pill" id="pillPreis" type="button">Preis</button>
+        <button class="filterbtn" id="filterBtn" type="button">Filter <span id="filterCount">0</span></button>
+      </div>
+
+      <!-- Einstellungs-Menü -->
+      <div class="panel" id="panel" hidden>
+        <h3>Meine Wünsche</h3>
+        <div class="grid3">
+          <div class="field">
+            <label for="kueche">Küche</label>
+            <select id="kueche"><option value="">Egal</option></select>
+          </div>
+          <div class="field">
+            <label for="preis">Maximaler Preis: <span class="val" id="preisAnz">$$$</span></label>
+            <input type="range" id="preis" min="1" max="3" step="1" value="3">
+          </div>
+          <div class="field">
+            <label for="bezirk">Bezirk</label>
+            <select id="bezirk"><option value="">Egal</option></select>
+          </div>
+        </div>
+        <hr>
+        <h3>Wie wichtig ist dir das? (0 = egal, 10 = sehr wichtig)</h3>
+        <div class="grid3">
+          <div class="field"><label for="wKueche">Küche: <span class="val" id="wKuecheAnz">6</span></label>
+            <input type="range" id="wKueche" min="0" max="10" value="6"></div>
+          <div class="field"><label for="wPreis">Preis: <span class="val" id="wPreisAnz">5</span></label>
+            <input type="range" id="wPreis" min="0" max="10" value="5"></div>
+          <div class="field"><label for="wBezirk">Bezirk: <span class="val" id="wBezirkAnz">4</span></label>
+            <input type="range" id="wBezirk" min="0" max="10" value="4"></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="reset" type="button">Zurücksetzen</button>
+          <button class="btn primary" id="fertig" type="button">Fertig</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick" id="quick"></div>
+  </section>
+
+  <section>
+    <div class="results-head">
+      <div>
+        <div class="kicker">Direkt ausgewählt</div>
+        <h2>Empfehlungen für dich</h2>
+        <div class="count" id="count"></div>
+      </div>
+      <div class="sortinfo">Sortiert nach: Empfehlungen</div>
+    </div>
+    <div class="cards" id="cards"></div>
+    <button class="btn more" id="more" type="button">Mehr anzeigen</button>
+  </section>
+
+  <footer>
+    <span><b>Food4Students</b> – Kulinarische Entdeckungen für Studierende</span>
+    <span>© 2026 Food4Students</span>
+  </footer>
+</div>
+
+<!-- Detail-Panel -->
+<div class="modal" id="modal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true">
+    <button class="close" id="close" type="button" aria-label="Schließen">✕</button>
+    <div id="detail"></div>
+  </div>
+</div>
+
+<!-- Zuerst Daten und Algorithmus laden, dann die Oberfläche -->
+<script src="restaurants.js"></script>
+<script src="algorithmus.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const STUFEN = ["", "$", "$$", "$$$"];
+  const EMOJI = { Italienisch: "🍝", Chinesisch: "🥢" };
+  const BILDER = { Italienisch: 3, Chinesisch: 2 };   // Anzahl Bilder pro Küche im Ordner images/
+  const SCHRITT = 6;
+  let sichtbar = SCHRITT;
+  let letzte = [];        // zuletzt berechnete Ergebnisse
+  let detailR = null;     // Restaurant im geöffneten Detail-Panel
+
+  // ---- Speicher im Browser (bleibt nach dem Neuladen erhalten) ----
+  function laden(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
+  function speichern(key, wert) { try { localStorage.setItem(key, JSON.stringify(wert)); } catch {} }
+  const gemerkt = laden("f4s-gemerkt");        // { restaurantName: true }
+  const bewertungen = laden("f4s-bewertungen"); // { restaurantName: "like" | "dislike" }
+
+  // ---- Gerätezeit: ist das Restaurant gerade geöffnet? ----
+  function minuten(zeit) { const [h, m] = zeit.split(":").map(Number); return h * 60 + m; }
+  function istOffen(r, jetzt = new Date()) {
+    const now = jetzt.getHours() * 60 + jetzt.getMinutes();
+    const von = minuten(r.oeffnung.von), bis = minuten(r.oeffnung.bis);
+    return von < bis ? now >= von && now < bis      // z. B. 11:00–22:00
+                     : now >= von || now < bis;     // über Mitternacht, z. B. 17:00–02:00
+  }
+
+  // Listen befüllen
+  const kuechen = [...new Set(restaurants.map((r) => r.kueche))];
+  kuechen.forEach((k) => $("kueche").add(new Option(k, k)));
+  for (let i = 1; i <= 23; i++) $("bezirk").add(new Option(i + ". Bezirk", i));
+
+  // Bild-Pfad: images/italienisch-1.jpg usw.
+  function bildPfad(r) {
+    const n = ((r.name.length + r.bezirk) % BILDER[r.kueche]) + 1;
+    return `images/${r.kueche.toLowerCase()}-${n}.jpg`;
+  }
+
+  function einstellungen() {
+    return {
+      wunsch: { kueche: $("kueche").value, maxPreis: STUFEN[$("preis").value], bezirk: Number($("bezirk").value) || 0 },
+      gewichtung: { kueche: +$("wKueche").value, preis: +$("wPreis").value, bezirk: +$("wBezirk").value },
+    };
+  }
+
+  // ---- HTML-Bausteine (für Karte und Detail-Panel) ----
+  function chipsHtml(r, wunsch) {
+    const chips = [];
+    if (wunsch.kueche) chips.push([r.details.kueche === 1, r.details.kueche === 1 ? "Passende Küche" : "Andere Küche"]);
+    chips.push([r.details.preis === 1, r.details.preis === 1 ? "Im Budget" : "Über dem Budget"]);
+    if (wunsch.bezirk) chips.push([r.details.bezirk === 1, r.details.bezirk === 1 ? "Im Wunsch-Bezirk" : "Anderer Bezirk"]);
+    return chips.map(([ok, t]) => `<span class="chip${ok ? "" : " no"}">${ok ? "✓" : "–"} ${t}</span>`).join("");
+  }
+  function fotoHtml(r, tag) {
+    return `
+      <span>${EMOJI[r.kueche]}</span>
+      <img src="${bildPfad(r)}" alt="${r.name}" onerror="this.remove()">
+      ${tag ? `<span class="tag">${tag}</span>` : ""}
+      <button class="heart${gemerkt[r.name] ? " on" : ""}" data-name="${r.name}" type="button" aria-label="Merken">${gemerkt[r.name] ? "♥" : "♡"}</button>
+      <span class="score">${r.punkte}/100</span>
+      <span class="price">${r.preis}</span>`;
+  }
+
+  function render() {
+    const { wunsch, gewichtung } = einstellungen();
+
+    // Anzeige in Panel und Suchleiste
+    $("preisAnz").textContent = wunsch.maxPreis;
+    $("wKuecheAnz").textContent = gewichtung.kueche;
+    $("wPreisAnz").textContent = gewichtung.preis;
+    $("wBezirkAnz").textContent = gewichtung.bezirk;
+    $("pillKueche").textContent = wunsch.kueche || "Küche";
+    $("pillKueche").classList.toggle("active", !!wunsch.kueche);
+    $("pillPreis").textContent = wunsch.maxPreis === "$$$" ? "Preis" : "bis " + wunsch.maxPreis;
+    $("pillPreis").classList.toggle("active", wunsch.maxPreis !== "$$$");
+    $("filterCount").textContent = (wunsch.kueche ? 1 : 0) + (wunsch.maxPreis !== "$$$" ? 1 : 0) + (wunsch.bezirk ? 1 : 0);
+
+    // Schnellfilter für die Küche
+    $("quick").innerHTML = '<span class="lbl">Beliebte Filter:</span>' +
+      ["", ...kuechen].map((k) =>
+        `<button class="pill${wunsch.kueche === k ? " active" : ""}" data-k="${k}" type="button">${k || "Alle anzeigen"}</button>`).join("");
+
+    // Textsuche + nur geöffnete Restaurants + Algorithmus
+    const text = $("suche").value.trim().toLowerCase();
+    const gefiltert = restaurants.filter((r) => istOffen(r) &&
+      (!text || (r.name + " " + r.kueche).toLowerCase().includes(text)));
+    const ergebnis = empfehleRestaurants(gefiltert, wunsch, gewichtung);
+    letzte = ergebnis.map((r) => ({ ...r, chips: chipsHtml(r, wunsch) }));
+
+    $("count").textContent = `${ergebnis.length} geöffnete Restaurants gefunden`;
+    $("more").style.display = ergebnis.length > sichtbar ? "block" : "none";
+
+    $("cards").innerHTML = letzte.length ? letzte.slice(0, sichtbar).map((r, i) => `
+      <article class="card" data-name="${r.name}">
+        <div class="photo ${r.kueche.toLowerCase()}">${fotoHtml(r, i === 0 ? "Beste Empfehlung" : "")}</div>
+        <div class="body">
+          <h3 class="name">${r.name}</h3>
+          <div class="sub">${r.kueche} · ${r.bezirk}. Bezirk</div>
+          <div class="meta">
+            <span class="rating">★ ${r.rating.toFixed(1)}</span>
+            <span class="open">● Geöffnet bis ${r.oeffnung.bis} Uhr</span>
+            ${bewertungen[r.name] ? `<span>${bewertungen[r.name] === "like" ? "👍" : "👎"}</span>` : ""}
+          </div>
+          <div class="chips">${r.chips}</div>
+        </div>
+      </article>`).join("")
+      : '<div class="empty">Gerade ist kein passendes Restaurant geöffnet. Versuche eine andere Suche oder schau später wieder vorbei.</div>';
+  }
+
+  // ---- Detail-Panel ----
+  function zeigeDetail() {
+    const r = detailR;
+    const v = bewertungen[r.name];
+    const karte = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(r.adresse);
+    $("detail").innerHTML = `
+      <div class="photo big ${r.kueche.toLowerCase()}">${fotoHtml(r, "")}</div>
+      <div class="dbody">
+        <h2 class="dname">${r.name}</h2>
+        <div class="sub">${r.kueche} · ${r.bezirk}. Bezirk</div>
+        <div class="meta big">
+          <span class="rating">★ ${r.rating.toFixed(1)}</span>
+          <span class="open">● Geöffnet bis ${r.oeffnung.bis} Uhr</span>
+        </div>
+        <div class="chips big">${r.chips}</div>
+        <dl class="facts">
+          <div><dt>Adresse</dt><dd><a href="${karte}" target="_blank" rel="noopener">📍 ${r.adresse}</a></dd></div>
+          <div><dt>Öffnungszeiten</dt><dd>Täglich ${r.oeffnung.von} – ${r.oeffnung.bis} Uhr</dd></div>
+          <div><dt>Preisklasse</dt><dd>${r.preis}</dd></div>
+          <div><dt>Passung zu deinen Wünschen</dt><dd>${r.punkte}/100 Punkte</dd></div>
+        </dl>
+        <div class="votes">
+          <span>Wie gefällt dir dieses Restaurant?</span>
+          <button class="vote like${v === "like" ? " on" : ""}" data-name="${r.name}" data-v="like" type="button">👍 Gefällt mir</button>
+          <button class="vote dislike${v === "dislike" ? " on" : ""}" data-name="${r.name}" data-v="dislike" type="button">👎 Gefällt mir nicht</button>
+        </div>
+      </div>`;
+  }
+  function oeffneDetail(name) {
+    detailR = letzte.find((r) => r.name === name);
+    if (!detailR) return;
+    zeigeDetail();
+    $("modal").hidden = false;
+    document.body.classList.add("lock");
+  }
+  function schliesseDetail() { $("modal").hidden = true; document.body.classList.remove("lock"); detailR = null; }
+
+  // ---- Such-Menü öffnen/schließen ----
+  const panel = $("panel");
+  const oeffnen = () => { panel.hidden = false; };
+  const schliessen = () => { panel.hidden = true; };
+  $("searchbar").addEventListener("click", oeffnen);
+  $("fertig").addEventListener("click", (e) => { e.stopPropagation(); schliessen(); });
+  document.addEventListener("click", (e) => { if (!$("searchwrap").contains(e.target)) schliessen(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!$("modal").hidden) schliesseDetail(); else schliessen();
+  });
+
+  // Änderungen -> Restaurants sofort aktualisieren
+  document.querySelectorAll("#panel select, #panel input, #suche").forEach((el) =>
+    el.addEventListener("input", () => { sichtbar = SCHRITT; render(); }));
+
+  $("reset").addEventListener("click", () => {
+    $("kueche").value = ""; $("bezirk").value = ""; $("preis").value = 3;
+    $("wKueche").value = 6; $("wPreis").value = 5; $("wBezirk").value = 4; $("suche").value = "";
+    sichtbar = SCHRITT; render();
+  });
+
+  $("quick").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    $("kueche").value = b.dataset.k; sichtbar = SCHRITT; render();
+  });
+
+  // Klick auf eine Karte -> Detail-Panel
+  $("cards").addEventListener("click", (e) => {
+    if (e.target.closest(".heart")) return;
+    const karte = e.target.closest(".card");
+    if (karte) oeffneDetail(karte.dataset.name);
+  });
+
+  // Merken (Herz) – in Karte und Detail-Panel
+  document.addEventListener("click", (e) => {
+    const h = e.target.closest(".heart"); if (!h) return;
+    const n = h.dataset.name;
+    gemerkt[n] ? delete gemerkt[n] : (gemerkt[n] = true);
+    speichern("f4s-gemerkt", gemerkt);
+    render();
+    if (detailR) zeigeDetail();
+  });
+
+  // Like / Dislike (nochmal klicken = Bewertung zurücknehmen)
+  $("detail").addEventListener("click", (e) => {
+    const b = e.target.closest(".vote"); if (!b) return;
+    const n = b.dataset.name, v = b.dataset.v;
+    bewertungen[n] === v ? delete bewertungen[n] : (bewertungen[n] = v);
+    speichern("f4s-bewertungen", bewertungen);
+    render();
+    zeigeDetail();
+  });
+
+  // Detail-Panel schließen
+  $("close").addEventListener("click", schliesseDetail);
+  $("modal").addEventListener("click", (e) => { if (e.target === $("modal")) schliesseDetail(); });
+
+  $("more").addEventListener("click", () => { sichtbar += SCHRITT; render(); });
+
+  render();
+  setInterval(render, 60000);   // jede Minute neu prüfen, wer geöffnet hat
+</script>
+</body>
+</html>
