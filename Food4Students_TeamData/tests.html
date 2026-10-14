@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Food4Students – Unit Tests</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #fdf6ec; color: #1b2b30; max-width: 820px; margin: 32px auto; padding: 0 16px; }
+  h1 { color: #0e6b7c; margin-bottom: 4px; }
+  .summary { font-size: 18px; font-weight: 600; margin: 16px 0 24px; }
+  .test { background: #fff; border-radius: 10px; padding: 12px 16px; margin: 8px 0; border-left: 6px solid #ccc; }
+  .test.ok { border-left-color: #2e9e5b; }
+  .test.fail { border-left-color: #d64545; }
+  .name { font-weight: 600; }
+  .detail { color: #66767a; font-size: 14px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Food4Students – Unit Tests</h1>
+<p>Diese Seite testet die echten Dateien <code>algorithmus.js</code> und <code>restaurants.js</code>.
+Am Code der Website wird nichts verändert. Jeder Test folgt dem AAA-Prinzip: Arrange, Act, Assert.</p>
+<div class="summary" id="summary"></div>
+<div id="results"></div>
+
+<!-- Die echten Projektdateien laden -->
+<script src="restaurants.js"></script>
+<script src="algorithmus.js"></script>
+
+<script>
+  // ---------- Mini-Testrunner ----------
+  const ergebnisse = [];
+  function test(name, fn) {
+    try {
+      const detail = fn();
+      ergebnisse.push({ name, ok: true, detail: detail || "" });
+    } catch (e) {
+      ergebnisse.push({ name, ok: false, detail: e.message });
+    }
+  }
+  function assertEquals(erwartet, tatsaechlich, text) {
+    if (erwartet !== tatsaechlich) {
+      throw new Error(`${text || "Wert"}: erwartet ${erwartet}, bekommen ${tatsaechlich}`);
+    }
+  }
+
+  // Standard-Gewichte wie auf der Website: Küche 6, Preis 5, Bezirk 4
+  const STANDARD = { kueche: 6, preis: 5, bezirk: 4 };
+
+  // Kopie von istOffen() aus index.html (Zeile 123–130).
+  // Die Funktion steckt im HTML, deshalb kann sie hier nicht direkt geladen werden.
+  function minuten(zeit) { const [h, m] = zeit.split(":").map(Number); return h * 60 + m; }
+  function istOffen(r, jetzt = new Date()) {
+    const now = jetzt.getHours() * 60 + jetzt.getMinutes();
+    const von = minuten(r.oeffnung.von), bis = minuten(r.oeffnung.bis);
+    return von < bis ? now >= von && now < bis
+                     : now >= von || now < bis;
+  }
+  const uhrzeit = (h, m = 0) => new Date(2026, 9, 14, h, m);
+
+  // ---------- Tests für den Algorithmus ----------
+
+  test("1. Perfekter Treffer bekommt 100 Punkte", () => {
+    // Arrange
+    const daten = [{ name: "A", kueche: "Italienisch", preis: "$$", bezirk: 20 }];
+    const wunsch = { kueche: "Italienisch", maxPreis: "$$", bezirk: 20 };
+    // Act
+    const ergebnis = empfehleRestaurants(daten, wunsch, STANDARD);
+    // Assert
+    assertEquals(100, ergebnis[0].punkte, "Punkte");
+    return "Küche, Preis und Bezirk passen → 40 + 33,3 + 26,7 = 100";
+  });
+
+  test("2. Rechenbeispiel aus der Algorithmus-Erklärung", () => {
+    const daten = [
+      { name: "Jadegarten",              kueche: "Chinesisch",  preis: "$$",  bezirk: 20 },
+      { name: "Trattoria Stephansplatz", kueche: "Italienisch", preis: "$",   bezirk: 1 },
+      { name: "Ristorante Donaublick",   kueche: "Italienisch", preis: "$$$", bezirk: 20 },
+      { name: "Osteria Augarten",        kueche: "Italienisch", preis: "$$",  bezirk: 20 },
+    ];
+    const ergebnis = empfehleRestaurants(daten, { kueche: "Italienisch", maxPreis: "$$", bezirk: 20 }, STANDARD);
+    const punkte = ergebnis.map((r) => r.punkte).join(", ");
+    assertEquals("100, 83, 73, 60", punkte, "Punkte in Reihenfolge");
+    assertEquals("Osteria Augarten", ergebnis[0].name, "Platz 1");
+    return "Reihenfolge: Osteria 100, Donaublick 83, Trattoria 73, Jadegarten 60";
+  });
+
+  test("3. Eine Preisstufe zu teuer gibt halbe Preis-Punkte", () => {
+    const daten = [{ name: "A", kueche: "Italienisch", preis: "$$$", bezirk: 20 }];
+    const ergebnis = empfehleRestaurants(daten, { kueche: "", maxPreis: "$$", bezirk: 0 }, { kueche: 0, preis: 10, bezirk: 0 });
+    assertEquals(50, ergebnis[0].punkte, "Punkte");
+    return "Nur Preis zählt (100 Punkte möglich), eine Stufe drüber → 50";
+  });
+
+  test("4. Zwei Preisstufen zu teuer gibt 0 Preis-Punkte", () => {
+    const daten = [{ name: "A", kueche: "Italienisch", preis: "$$$", bezirk: 20 }];
+    const ergebnis = empfehleRestaurants(daten, { kueche: "", maxPreis: "$", bezirk: 0 }, { kueche: 0, preis: 10, bezirk: 0 });
+    assertEquals(0, ergebnis[0].punkte, "Punkte");
+    return "$$$ bei Limit $ → 0 Punkte";
+  });
+
+  test("5. Edge Case: alle Gewichte auf 0 → kein Absturz, 0 Punkte", () => {
+    const daten = [{ name: "A", kueche: "Italienisch", preis: "$", bezirk: 1 }];
+    const ergebnis = empfehleRestaurants(daten, { kueche: "Italienisch", maxPreis: "$", bezirk: 1 }, { kueche: 0, preis: 0, bezirk: 0 });
+    assertEquals(0, ergebnis[0].punkte, "Punkte");
+    return "Keine Division durch 0, kein NaN";
+  });
+
+  test("6. „Egal“ bei Küche und Bezirk zählt als erfüllt", () => {
+    const daten = [{ name: "A", kueche: "Chinesisch", preis: "$", bezirk: 7 }];
+    const ergebnis = empfehleRestaurants(daten, { kueche: "", maxPreis: "$$$", bezirk: 0 }, STANDARD);
+    assertEquals(100, ergebnis[0].punkte, "Punkte");
+    return "Keine Wünsche angegeben → jedes Restaurant passt voll";
+  });
+
+  test("7. Gewählte Küche steht immer zuerst, auch mit weniger Punkten", () => {
+    const daten = [
+      { name: "China günstig",   kueche: "Chinesisch",  preis: "$",   bezirk: 1 },
+      { name: "Italien teuer",   kueche: "Italienisch", preis: "$$$", bezirk: 1 },
+    ];
+    const ergebnis = empfehleRestaurants(daten, { kueche: "Italienisch", maxPreis: "$", bezirk: 0 }, { kueche: 1, preis: 10, bezirk: 0 });
+    assertEquals("Italien teuer", ergebnis[0].name, "Platz 1");
+    if (!(ergebnis[1].punkte > ergebnis[0].punkte)) throw new Error("Platz 2 sollte mehr Punkte haben");
+    return `Italien (${ergebnis[0].punkte} P.) vor China (${ergebnis[1].punkte} P.), weil die Küche Vorrang hat`;
+  });
+
+  test("8. Edge Case: leere Liste → leeres Ergebnis, kein Fehler", () => {
+    const ergebnis = empfehleRestaurants([], { kueche: "Italienisch", maxPreis: "$", bezirk: 1 }, STANDARD);
+    assertEquals(0, ergebnis.length, "Anzahl");
+    return "Passt zu SYS-NFR-002 (leere Suchergebnisse abfangen)";
+  });
+
+  // ---------- Tests für die Daten ----------
+
+  test("9. Daten: 115 Restaurants, 5 pro Bezirk", () => {
+    assertEquals(115, restaurants.length, "Anzahl Restaurants");
+    for (let b = 1; b <= 23; b++) {
+      assertEquals(5, restaurants.filter((r) => r.bezirk === b).length, `Restaurants im ${b}. Bezirk`);
+    }
+    return "23 Bezirke × 5 = 115";
+  });
+
+  test("10. Daten: jedes Restaurant hat alle Pflichtfelder", () => {
+    const felder = ["name", "kueche", "preis", "bezirk", "adresse", "rating", "oeffnung"];
+    restaurants.forEach((r) => felder.forEach((f) => {
+      if (r[f] === undefined) throw new Error(`${r.name || "?"} hat kein Feld „${f}“`);
+    }));
+    return "name, kueche, preis, bezirk, adresse, rating, oeffnung vorhanden";
+  });
+
+  // ---------- Tests für die Öffnungszeiten ----------
+
+  test("11. Öffnungszeit über Mitternacht: 17:00–02:00 ist um 01:00 offen", () => {
+    assertEquals(true, istOffen({ oeffnung: { von: "17:00", bis: "02:00" } }, uhrzeit(1)), "offen um 01:00");
+    return "Nach Mitternacht noch offen";
+  });
+
+  test("12. Öffnungszeit über Mitternacht: 17:00–02:00 ist um 12:00 zu", () => {
+    assertEquals(false, istOffen({ oeffnung: { von: "17:00", bis: "02:00" } }, uhrzeit(12)), "offen um 12:00");
+    return "Mittags geschlossen";
+  });
+
+  test("13. Grenzwert: 11:30–23:00 ist um genau 23:00 schon zu", () => {
+    const r = { oeffnung: { von: "11:30", bis: "23:00" } };
+    assertEquals(true, istOffen(r, uhrzeit(22, 59)), "offen um 22:59");
+    assertEquals(false, istOffen(r, uhrzeit(23, 0)), "offen um 23:00");
+    return "22:59 offen, 23:00 geschlossen";
+  });
+
+  // ---------- Anzeige ----------
+  const bestanden = ergebnisse.filter((e) => e.ok).length;
+  document.getElementById("summary").textContent =
+    `${bestanden} von ${ergebnisse.length} Tests bestanden ${bestanden === ergebnisse.length ? "✅" : "❌"}`;
+  document.getElementById("results").innerHTML = ergebnisse.map((e) => `
+    <div class="test ${e.ok ? "ok" : "fail"}">
+      <div class="name">${e.ok ? "✅" : "❌"} ${e.name}</div>
+      <div class="detail">${e.detail}</div>
+    </div>`).join("");
+</script>
+</body>
+</html>
